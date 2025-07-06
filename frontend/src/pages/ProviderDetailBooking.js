@@ -3,6 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useUserData } from '../context/UserDataContext';
 import { providers } from '../data/sampleData';
 import { format } from 'date-fns';
+import GoogleMapReact from 'google-map-react';
+
+const MapMarker = ({ text }) => (
+  <div style={{ color: 'red', fontWeight: 'bold', fontSize: '24px' }}>
+    📍
+    <div style={{ fontSize: '12px', color: '#333' }}>{text}</div>
+  </div>
+);
 
 const ProviderDetailBooking = () => {
   const { id } = useParams();
@@ -12,9 +20,11 @@ const ProviderDetailBooking = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [loading, setLoading] = useState(true);
+  const [mapCenter, setMapCenter] = useState({ lat: 16.3067, lng: 80.4365 }); // Default: Guntur
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
-    // Simulate API call delay
+    // Simulate API call delay and use sampleData for provider lookup
     const timer = setTimeout(() => {
       const foundProvider = providers.find(p => p.id === id);
       setProvider(foundProvider);
@@ -23,6 +33,30 @@ const ProviderDetailBooking = () => {
 
     return () => clearTimeout(timer);
   }, [id]);
+
+  // Geocode provider address using Google Maps Geocoding API (HTTP fetch)
+  useEffect(() => {
+    const geocodeAddress = async () => {
+      if (provider && provider.address) {
+        try {
+          const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+          const response = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(provider.address)}&key=${apiKey}`
+          );
+          const data = await response.json();
+          if (data.status === 'OK' && data.results && data.results[0]) {
+            setMapCenter({
+              lat: data.results[0].geometry.location.lat,
+              lng: data.results[0].geometry.location.lng,
+            });
+          }
+        } catch (e) {
+          // Ignore geocoding errors
+        }
+      }
+    };
+    geocodeAddress();
+  }, [provider]);
 
   const handleBooking = async () => {
     if (!selectedDate || !selectedTime) {
@@ -191,6 +225,26 @@ const ProviderDetailBooking = () => {
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ color: '#666', marginBottom: '8px' }}>Location</h3>
               <p>📍 {provider.address}</p>
+              <div style={{ height: '250px', width: '100%', marginTop: '10px', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                <GoogleMapReact
+                  bootstrapURLKeys={{ key: process.env.REACT_APP_GOOGLE_MAPS_API_KEY }}
+                  defaultCenter={mapCenter}
+                  center={mapCenter}
+                  defaultZoom={15}
+                  yesIWantToUseGoogleMapApiInternals
+                >
+                  <MapMarker lat={mapCenter.lat} lng={mapCenter.lng} text={provider.name} />
+                </GoogleMapReact>
+              </div>
+              <button
+                style={{ marginTop: '12px', padding: '10px 18px', background: '#4285F4', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', fontSize: '15px' }}
+                onClick={() => {
+                  const destination = encodeURIComponent(provider.address);
+                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}`, '_blank');
+                }}
+              >
+                Get Directions
+              </button>
             </div>
 
             <div style={{ marginBottom: '20px' }}>

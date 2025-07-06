@@ -17,26 +17,54 @@ const ProviderResultsPage = () => {
     try {
       setLoading(true);
       
-      // Real API call to get providers from backend
-      const response = await fetch('http://127.0.0.1:8000/api/providers/', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch providers');
-      }
-
-      const providers = await response.json();
-      
-      // Apply matching logic if user data exists
+      // Use the new provider matching endpoint
       if (state.userData) {
-        const matched = findMatchingProviders(state.userData, providers);
-        setMatchedProviders(matched);
+        const { primarySymptoms, insuranceProvider, city, urgencyLevel } = state.userData;
+        
+        // Build query parameters
+        const params = new URLSearchParams();
+        if (primarySymptoms && primarySymptoms.length > 0) {
+          params.append('symptoms', primarySymptoms.join(', '));
+        }
+        if (insuranceProvider) {
+          params.append('insurance', insuranceProvider);
+        }
+        if (city) {
+          params.append('location', city);
+        }
+        if (urgencyLevel) {
+          params.append('urgency', urgencyLevel);
+        }
+        params.append('limit', '3');
+        
+        const response = await fetch(`http://127.0.0.1:8000/api/providers/match/?${params.toString()}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch matched providers');
+        }
+
+        const matchedProviders = await response.json();
+        setMatchedProviders(matchedProviders);
       } else {
-        setMatchedProviders(providers);
+        // Fallback to get all providers if no user data
+        const response = await fetch('http://127.0.0.1:8000/api/providers/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch providers');
+        }
+
+        const providers = await response.json();
+        setMatchedProviders(providers.slice(0, 3)); // Show top 3
       }
       
       setLoading(false);
@@ -64,9 +92,8 @@ const ProviderResultsPage = () => {
   };
 
   const handleProviderSelect = (provider) => {
-    const providerId = provider.id || provider._id;
-    if (providerId) {
-      navigate(`/provider/${providerId}`);
+    if (provider.id) {
+      navigate(`/provider/${provider.id}`);
     } else {
       alert('Provider ID not found.');
     }

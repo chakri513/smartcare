@@ -1,14 +1,19 @@
 // Comprehensive validation utilities
 export const validateSymptoms = (symptoms) => {
-  if (!symptoms || symptoms.trim().length === 0) {
+  // If symptoms is an array, join to string
+  let symptomsStr = symptoms;
+  if (Array.isArray(symptoms)) {
+    symptomsStr = symptoms.join(', ');
+  }
+  if (!symptomsStr || symptomsStr.trim().length === 0) {
     return { isValid: false, error: 'Please describe your symptoms' };
   }
   
-  if (symptoms.trim().length < 10) {
+  if (symptomsStr.trim().length < 10) {
     return { isValid: false, error: 'Please provide more detailed symptoms (at least 10 characters)' };
   }
   
-  if (symptoms.trim().length > 500) {
+  if (symptomsStr.trim().length > 500) {
     return { isValid: false, error: 'Symptoms description is too long (maximum 500 characters)' };
   }
   
@@ -22,7 +27,7 @@ export const validateSymptoms = (symptoms) => {
   ];
   
   for (const pattern of dangerousPatterns) {
-    if (pattern.test(symptoms)) {
+    if (pattern.test(symptomsStr)) {
       return { isValid: false, error: 'Invalid content detected in symptoms' };
     }
   }
@@ -42,13 +47,7 @@ export const validateLocation = (location) => {
   if (location.trim().length > 100) {
     return { isValid: false, error: 'Location is too long (maximum 100 characters)' };
   }
-  
-  // Basic location format validation
-  const locationPattern = /^[a-zA-Z\s,.-]+$/;
-  if (!locationPattern.test(location.trim())) {
-    return { isValid: false, error: 'Location contains invalid characters' };
-  }
-  
+  // Allow all common address characters, do not block spaces or special symbols
   return { isValid: true, error: null };
 };
 
@@ -116,16 +115,12 @@ export const validateAppointmentTime = (time) => {
 
 export const sanitizeInput = (input) => {
   if (typeof input !== 'string') return input;
-  
   // Remove HTML tags
   let sanitized = input.replace(/<[^>]*>/g, '');
-  
-  // Remove potentially dangerous characters
-  sanitized = sanitized.replace(/[<>\"'&]/g, '');
-  
-  // Trim whitespace
-  sanitized = sanitized.trim();
-  
+  // Remove potentially dangerous characters except spaces and address symbols
+  sanitized = sanitized.replace(/[<>"'&]/g, '');
+  // Do NOT trim whitespace inside the string, only at the ends
+  sanitized = sanitized.replace(/^\s+|\s+$/g, '');
   return sanitized;
 };
 

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
 * {
   margin: 0;
   padding: 0;
@@ -5,12 +7,13 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #f5f5f5;
+  color: #222;
 }
 
 code {
@@ -70,7 +73,15 @@ code {
   cursor: pointer;
   font-size: 16px;
   font-weight: 600;
-  transition: all 0.3s ease;
+  transition: background 0.3s, color 0.3s, box-shadow 0.3s, transform 0.2s;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
+}
+
+.btn:focus, .btn:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 24px rgba(102, 126, 234, 0.18);
 }
 
 .btn-primary {
@@ -91,11 +102,12 @@ code {
   background-color: #545b62;
 }
 
-.card {
-  background: white;
+.card, .provider-card {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 32px 0 rgba(102, 126, 234, 0.10), 0 1.5px 8px 0 rgba(118, 75, 162, 0.08);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
 }
 
@@ -118,7 +130,9 @@ code {
   border: 2px solid #e1e5e9;
   border-radius: 8px;
   font-size: 16px;
-  transition: border-color 0.3s ease;
+  transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.04);
 }
 
 /* Accessibility improvements */
@@ -126,8 +140,9 @@ code {
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  border-color: #764ba2;
+  box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.12);
+  background: rgba(255,255,255,0.98);
 }
 
 /* Loading animation */
@@ -164,27 +179,6 @@ code {
   100% { width: 100%; }
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #007bff;
-}
-
-.provider-card {
-  border: 1px solid #e1e5e9;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 16px;
-  background: white;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.provider-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
 .rating {
   color: #ffc107;
   font-size: 18px;
@@ -218,4 +212,31 @@ code {
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 20px;
+}
+
+/* Enhanced focus states */
+:focus {
+  outline: 2px solid #764ba2;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.15);
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 0 6px;
+  }
+  .card, .provider-card {
+    padding: 10px;
+    border-radius: 10px;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 15px;
+    padding: 10px;
+  }
+  .btn {
+    font-size: 14px;
+    padding: 10px 16px;
+  }
 } 

@@ -8,7 +8,7 @@ const SuccessConfirmationPage = () => {
   const { state } = useUserData();
 
   const handleStartOver = () => {
-    navigate('/');
+    navigate('/dashboard');
   };
 
   const handleViewBooking = () => {
@@ -38,6 +38,13 @@ const SuccessConfirmationPage = () => {
 
   const appointmentDate = new Date(state.bookingData.appointment_time);
   const confirmationNumber = `CONF-${Date.now().toString().slice(-8)}`;
+
+  // Fallback logic for estimated cost
+  const estimatedCost =
+    state.costEstimate?.outOfPocketCost ??
+    state.bookingData?.cost ??
+    state.bookingData?.outOfPocketCost ??
+    null;
 
   return (
     <div className="container">
@@ -118,7 +125,7 @@ const SuccessConfirmationPage = () => {
             <div>
               <h3 style={{ color: '#666', marginBottom: '8px' }}>Estimated Cost</h3>
               <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#dc3545' }}>
-                ${state.costEstimate?.outOfPocketCost?.toFixed(2)}
+                {estimatedCost !== null ? `$${Number(estimatedCost).toFixed(2)}` : 'N/A'}
               </p>
             </div>
           </div>

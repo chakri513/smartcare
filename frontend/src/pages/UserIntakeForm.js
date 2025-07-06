@@ -21,7 +21,7 @@ const UserIntakeForm = () => {
     phoneNumber: state.userData.phoneNumber || '',
     age: state.userData.age || '',
     email: state.userData.email || '',
-    primarySymptoms: state.userData.primarySymptoms || '',
+    primarySymptoms: state.userData.primarySymptoms || [],
     duration: state.userData.duration || '',
     urgencyLevel: state.userData.urgencyLevel || '',
     severity: state.userData.severity || '',
@@ -35,6 +35,8 @@ const UserIntakeForm = () => {
     memberId: state.userData.memberId || ''
   });
   const [errors, setErrors] = useState({});
+  const [selectedSymptom, setSelectedSymptom] = useState('');
+  const [customSymptom, setCustomSymptom] = useState('');
 
   // Check if user is authenticated
   useEffect(() => {
@@ -52,7 +54,15 @@ const UserIntakeForm = () => {
     { value: 'HDFC ERGO', label: 'HDFC ERGO' },
     { value: 'Max Bupa', label: 'Max Bupa' },
     { value: 'Religare', label: 'Religare' },
-    { value: 'Cigna TTK', label: 'Cigna TTK' }
+    { value: 'Cigna TTK', label: 'Cigna TTK' },
+    { value: 'Care Health', label: 'Care Health' },
+    { value: 'ManipalCigna', label: 'ManipalCigna' },
+    { value: 'Aditya Birla', label: 'Aditya Birla' },
+    { value: 'SBI Health', label: 'SBI Health' },
+    { value: 'Future Generali', label: 'Future Generali' },
+    { value: 'Universal Sompo', label: 'Universal Sompo' },
+    { value: 'National Insurance', label: 'National Insurance' },
+    { value: 'New India Assurance', label: 'New India Assurance' }
   ];
 
   const insurancePlans = {
@@ -103,6 +113,54 @@ const UserIntakeForm = () => {
       { value: 'ProHealth', label: 'ProHealth' },
       { value: 'HealthFirst', label: 'HealthFirst' },
       { value: 'Family First', label: 'Family First' }
+    ],
+    'Care Health': [
+      { value: '', label: 'Select plan' },
+      { value: 'Care Plus', label: 'Care Plus' },
+      { value: 'Care Freedom', label: 'Care Freedom' },
+      { value: 'Care Secure', label: 'Care Secure' }
+    ],
+    'ManipalCigna': [
+      { value: '', label: 'Select plan' },
+      { value: 'ProHealth Plus', label: 'ProHealth Plus' },
+      { value: 'HealthFirst', label: 'HealthFirst' },
+      { value: 'Family First', label: 'Family First' }
+    ],
+    'Aditya Birla': [
+      { value: '', label: 'Select plan' },
+      { value: 'Activ Health', label: 'Activ Health' },
+      { value: 'Activ Care', label: 'Activ Care' },
+      { value: 'Activ Shield', label: 'Activ Shield' }
+    ],
+    'SBI Health': [
+      { value: '', label: 'Select plan' },
+      { value: 'Arogya Plus', label: 'Arogya Plus' },
+      { value: 'Arogya Top Up', label: 'Arogya Top Up' },
+      { value: 'Arogya Premier', label: 'Arogya Premier' }
+    ],
+    'Future Generali': [
+      { value: '', label: 'Select plan' },
+      { value: 'Health Total', label: 'Health Total' },
+      { value: 'Health Plus', label: 'Health Plus' },
+      { value: 'Health Secure', label: 'Health Secure' }
+    ],
+    'Universal Sompo': [
+      { value: '', label: 'Select plan' },
+      { value: 'Health Shield', label: 'Health Shield' },
+      { value: 'Health Guard', label: 'Health Guard' },
+      { value: 'Health Plus', label: 'Health Plus' }
+    ],
+    'National Insurance': [
+      { value: '', label: 'Select plan' },
+      { value: 'Mediclaim', label: 'Mediclaim' },
+      { value: 'Family Floater', label: 'Family Floater' },
+      { value: 'Senior Citizen', label: 'Senior Citizen' }
+    ],
+    'New India Assurance': [
+      { value: '', label: 'Select plan' },
+      { value: 'Mediclaim Plus', label: 'Mediclaim Plus' },
+      { value: 'Family Floater', label: 'Family Floater' },
+      { value: 'Senior Citizen', label: 'Senior Citizen' }
     ]
   };
 
@@ -111,7 +169,6 @@ const UserIntakeForm = () => {
     { value: 'Low', label: 'Low - Can wait a few days' },
     { value: 'Medium', label: 'Medium - Should see doctor soon' },
     { value: 'High', label: 'High - Need immediate attention' },
-    { value: 'Emergency', label: 'Emergency - Call 108 immediately' }
   ];
 
   const durationOptions = [
@@ -138,15 +195,37 @@ const UserIntakeForm = () => {
     { value: '10', label: '10 - Worst possible pain/symptom' }
   ];
 
+  // Add common symptoms for dropdown
+  const commonSymptoms = [
+    { value: '', label: 'Select your primary symptom' },
+    { value: 'Fever', label: 'Fever' },
+    { value: 'Cough', label: 'Cough' },
+    { value: 'Headache', label: 'Headache' },
+    { value: 'Chest pain', label: 'Chest pain' },
+    { value: 'Back pain', label: 'Back pain' },
+    { value: 'Joint pain', label: 'Joint pain' },
+    { value: 'Rash', label: 'Rash' },
+    { value: 'Fatigue', label: 'Fatigue' },
+    { value: 'Shortness of breath', label: 'Shortness of breath' },
+    { value: 'Abdominal pain', label: 'Abdominal pain' },
+    { value: 'Dizziness', label: 'Dizziness' },
+    { value: 'Sore throat', label: 'Sore throat' },
+    { value: 'Vomiting', label: 'Vomiting' },
+    { value: 'Diarrhea', label: 'Diarrhea' },
+    { value: 'Other', label: 'Other (please specify)' }
+  ];
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    const sanitizedValue = sanitizeInput(value);
-    
+    let newValue = value;
+    // Only sanitize fields that are not address or detailedDescription or city/state
+    if (name !== 'address' && name !== 'detailedDescription' && name !== 'city' && name !== 'state') {
+      newValue = sanitizeInput(newValue);
+    }
     setFormData(prev => ({
       ...prev,
-      [name]: sanitizedValue
+      [name]: newValue
     }));
-    
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
@@ -154,6 +233,31 @@ const UserIntakeForm = () => {
         [name]: ''
       }));
     }
+  };
+
+  const handleAddSymptom = () => {
+    let symptomToAdd = selectedSymptom;
+    if (selectedSymptom === 'Other' && customSymptom.trim()) {
+      symptomToAdd = customSymptom.trim();
+    }
+    if (
+      symptomToAdd &&
+      !formData.primarySymptoms.includes(symptomToAdd)
+    ) {
+      setFormData(prev => ({
+        ...prev,
+        primarySymptoms: [...prev.primarySymptoms, symptomToAdd]
+      }));
+      setSelectedSymptom('');
+      setCustomSymptom('');
+    }
+  };
+
+  const handleRemoveSymptom = (symptom) => {
+    setFormData(prev => ({
+      ...prev,
+      primarySymptoms: prev.primarySymptoms.filter(s => s !== symptom)
+    }));
   };
 
   const validateForm = () => {
@@ -241,6 +345,13 @@ const UserIntakeForm = () => {
       newErrors.memberId = 'Member ID is required';
     }
 
+    // City: only allow letters and spaces
+    if (!formData.city.trim()) {
+      newErrors.city = 'City is required';
+    } else if (!/^[A-Za-z ]+$/.test(formData.city.trim())) {
+      newErrors.city = 'City must contain only letters and spaces.';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -261,10 +372,15 @@ const UserIntakeForm = () => {
         return;
       }
 
+      // Use all selected symptoms
+      let primarySymptomsValue = formData.primarySymptoms;
+      if (Array.isArray(primarySymptomsValue)) {
+        primarySymptomsValue = primarySymptomsValue.join(', ');
+      }
       // Prepare data for backend
       const intakeData = {
         user_id: user.id,
-        primarySymptoms: formData.primarySymptoms,
+        primarySymptoms: primarySymptomsValue,
         duration: formData.duration,
         urgencyLevel: formData.urgencyLevel,
         severity: formData.severity,
@@ -298,7 +414,7 @@ const UserIntakeForm = () => {
       // Store in context for frontend use
       dispatch({
         type: 'SET_USER_DATA',
-        payload: formData
+        payload: { ...formData, primarySymptoms: primarySymptomsValue }
       });
 
       // Navigate to results page
@@ -478,16 +594,31 @@ const UserIntakeForm = () => {
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
               <div className="form-group">
-                <label htmlFor="primarySymptoms">Primary Symptom or Concern *</label>
-                <input
-                  type="text"
-                  id="primarySymptoms"
-                  name="primarySymptoms"
-                  value={formData.primarySymptoms}
-                  onChange={handleInputChange}
-                  placeholder="e.g., chest pain, fever, headache"
-                  className={errors.primarySymptoms ? 'error' : ''}
-                />
+                <label htmlFor="primarySymptoms">Primary Symptom(s) or Concern *</label>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select
+                    id="primarySymptomsDropdown"
+                    value={selectedSymptom}
+                    onChange={e => {
+                      setSelectedSymptom(e.target.value);
+                    }}
+                    style={{ minWidth: '200px' }}
+                  >
+                    <option value="">Select a symptom</option>
+                    {commonSymptoms.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={handleAddSymptom} style={{ padding: '8px 16px', borderRadius: '8px', background: '#764ba2', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Add</button>
+                </div>
+                <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {formData.primarySymptoms.map(symptom => (
+                    <span key={symptom} style={{ background: '#e0e7ff', color: '#333', padding: '6px 12px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
+                      {symptom}
+                      <button type="button" onClick={() => handleRemoveSymptom(symptom)} style={{ background: 'none', border: 'none', color: '#764ba2', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px', marginLeft: '4px' }} aria-label={`Remove ${symptom}`}>&times;</button>
+                    </span>
+                  ))}
+                </div>
                 {errors.primarySymptoms && <div className="error" style={{ marginTop: '8px' }}>{errors.primarySymptoms}</div>}
               </div>
 
@@ -691,7 +822,7 @@ const UserIntakeForm = () => {
                   className={errors.insurancePlan ? 'error' : ''}
                   disabled={!formData.insuranceProvider}
                 >
-                  {formData.insuranceProvider 
+                  {formData.insuranceProvider && insurancePlans[formData.insuranceProvider] 
                     ? insurancePlans[formData.insuranceProvider].map(option => (
                         <option key={option.value} value={option.value}>
                           {option.label}

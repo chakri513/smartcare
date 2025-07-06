@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserData } from '../context/UserDataContext';
 
@@ -8,26 +8,30 @@ const AIGeneratedCareSummary = () => {
   const [careSummary, setCareSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    generateCareSummary();
-  }, [generateCareSummary]);
-
-  const generateCareSummary = () => {
+  const generateCareSummary = useCallback(() => {
     const { userData, selectedProvider, costEstimate } = state;
     const { primarySymptoms, insuranceProvider } = userData;
+    
+    // Handle symptoms whether they come as array or string
+    let symptomsText = '';
+    if (Array.isArray(primarySymptoms)) {
+      symptomsText = primarySymptoms.join(' ').toLowerCase();
+    } else {
+      symptomsText = primarySymptoms.toLowerCase();
+    }
     
     // Generate AI-like summary based on symptoms and provider
     let whyThisProvider = '';
     let careExpectations = '';
     let preparationTips = '';
 
-    if (primarySymptoms.toLowerCase().includes('rash') || primarySymptoms.toLowerCase().includes('skin')) {
+    if (symptomsText.includes('rash') || symptomsText.includes('skin')) {
       whyThisProvider = `${selectedProvider.name} is an excellent choice for your skin concerns. As a board-certified dermatologist with ${selectedProvider.experience} of experience, they specialize in diagnosing and treating various skin conditions. Their high rating of ${selectedProvider.rating}/5 and short wait time of ${selectedProvider.wait_time} make them an ideal match for your needs.`;
       
       careExpectations = `During your visit, Dr. ${selectedProvider.name.split(' ')[1]} will conduct a thorough examination of your skin condition. They may take photographs for documentation, perform a skin biopsy if necessary, and discuss treatment options. The appointment typically lasts 20-30 minutes, and you'll receive a detailed treatment plan.`;
       
       preparationTips = `Before your appointment: 1) Avoid applying any creams or makeup to the affected area, 2) Bring a list of any medications you're currently taking, 3) Wear loose-fitting clothing that allows easy access to the affected area, 4) Consider taking photos of your condition if it changes before the appointment.`;
-    } else if (primarySymptoms.toLowerCase().includes('chest pain')) {
+    } else if (symptomsText.includes('chest pain')) {
       whyThisProvider = `${selectedProvider.name} is highly qualified to address your cardiac concerns. As a cardiologist with ${selectedProvider.experience} of experience and training from ${selectedProvider.education}, they have extensive expertise in evaluating chest pain and related symptoms. Their excellent rating and quick availability ensure you'll receive prompt, quality care.`;
       
       careExpectations = `Your cardiology consultation will include a comprehensive medical history review, physical examination, and potentially diagnostic tests like an EKG or stress test. Dr. ${selectedProvider.name.split(' ')[1]} will assess your symptoms and develop a personalized treatment plan. The visit typically takes 45-60 minutes.`;
@@ -47,10 +51,18 @@ const AIGeneratedCareSummary = () => {
       preparationTips,
       provider: selectedProvider,
       costEstimate,
-              symptoms: primarySymptoms,
-        insurance: insuranceProvider
+      symptoms: primarySymptoms,
+      insurance: insuranceProvider
     };
-  };
+  }, [state]);
+
+  useEffect(() => {
+    const summary = generateCareSummary();
+    if (summary) {
+      setCareSummary(summary);
+    }
+    setLoading(false);
+  }, [generateCareSummary]);
 
   const handleConfirmBooking = async () => {
     try {
@@ -87,6 +99,17 @@ const AIGeneratedCareSummary = () => {
       const result = await response.json();
       console.log('Booking confirmed successfully:', result);
 
+      // Save cost estimate and booking data to context before navigating
+      dispatch({ type: 'SET_COST_ESTIMATE', payload: careSummary.costEstimate });
+      dispatch({ type: 'SET_BOOKING_DATA', payload: bookingData });
+
+      // Fetch latest bookings and update context for dashboard
+      const bookingsRes = await fetch(`http://127.0.0.1:8000/api/bookings/user/${user.id}`);
+      if (bookingsRes.ok) {
+        const bookings = await bookingsRes.json();
+        dispatch({ type: 'SET_UPCOMING_APPOINTMENTS', payload: bookings });
+      }
+
       // Navigate to confirmation page
       navigate('/confirmation');
       
@@ -98,12 +121,64 @@ const AIGeneratedCareSummary = () => {
 
   if (loading) {
     return (
-      <div className="container">
-        <div className="card">
-          <div className="loading">
-            <h2>Generating your personalized care summary...</h2>
-            <p>Our AI is analyzing your symptoms and provider match</p>
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ 
+          background: 'rgba(255, 255, 255, 0.95)', 
+          backdropFilter: 'blur(20px)',
+          borderRadius: '20px',
+          padding: '60px 40px',
+          maxWidth: '500px',
+          width: '100%',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '36px',
+            color: 'white',
+            fontWeight: 'bold',
+            boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
+            margin: '0 auto 30px',
+            position: 'relative',
+            overflow: 'hidden',
+            animation: 'pulse 2s infinite'
+          }}>
+            <span style={{ fontSize: '32px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>
+              🤖
+            </span>
           </div>
+          <h2 style={{ color: '#333', marginBottom: '15px', fontSize: '24px', fontWeight: '700' }}>
+            Generating your personalized care summary...
+          </h2>
+          <p style={{ color: '#666', fontSize: '16px', marginBottom: '20px' }}>
+            Our AI is analyzing your symptoms and provider match
+          </p>
+          <div style={{
+            width: '40px',
+            height: '4px',
+            background: 'linear-gradient(90deg, #667eea, #764ba2)',
+            borderRadius: '2px',
+            margin: '0 auto',
+            animation: 'loading 1.5s ease-in-out infinite'
+          }}></div>
+          <style>{`
+            @keyframes pulse {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.05); }
+            }
+            @keyframes loading {
+              0% { width: 40px; }
+              50% { width: 120px; }
+              100% { width: 40px; }
+            }
+          `}</style>
         </div>
       </div>
     );
@@ -111,27 +186,82 @@ const AIGeneratedCareSummary = () => {
 
   if (!careSummary) {
     return (
-      <div className="container">
-        <div className="card">
-          <div className="error">
-            <h3>Unable to generate care summary</h3>
-            <p>We couldn't create your personalized care summary. Please try again.</p>
-            <button 
-              className="btn btn-primary" 
-              onClick={() => window.location.reload()}
-              style={{ marginTop: '16px' }}
-            >
-              Try Again
-            </button>
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ 
+          background: 'rgba(255, 255, 255, 0.95)', 
+          backdropFilter: 'blur(20px)',
+          borderRadius: '20px',
+          padding: '40px',
+          maxWidth: '500px',
+          width: '100%',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+            borderRadius: '15px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '28px',
+            color: 'white',
+            fontWeight: 'bold',
+            boxShadow: '0 8px 25px rgba(220, 53, 69, 0.4)',
+            margin: '0 auto 20px'
+          }}>
+            ⚠️
           </div>
+          <h3 style={{ color: '#333', marginBottom: '15px', fontSize: '20px', fontWeight: '700' }}>
+            Unable to generate care summary
+          </h3>
+          <p style={{ color: '#666', fontSize: '16px', marginBottom: '25px' }}>
+            We couldn't create your personalized care summary. Please try again.
+          </p>
+          <button 
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              border: 'none',
+              color: 'white',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: '600',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+            }}
+            onClick={() => window.location.reload()}
+            onMouseOver={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
+            }}
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container">
-      <div className="card">
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '20px' }}>
+      <div style={{ 
+        background: 'rgba(255, 255, 255, 0.95)', 
+        backdropFilter: 'blur(20px)',
+        borderRadius: '20px',
+        padding: '40px',
+        maxWidth: '800px',
+        margin: '0 auto',
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      }}>
         <h1 style={{ marginBottom: '30px', color: '#333' }}>
           Your Personalized Care Summary
         </h1>
@@ -205,15 +335,52 @@ const AIGeneratedCareSummary = () => {
 
         <div style={{ display: 'flex', gap: '16px' }}>
           <button
-            className="btn btn-secondary"
+            style={{
+              background: 'rgba(102, 126, 234, 0.1)',
+              border: '2px solid #667eea',
+              color: '#667eea',
+              padding: '15px 30px',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: '600',
+              transition: 'all 0.3s ease'
+            }}
             onClick={() => navigate('/cost-estimate')}
+            onMouseOver={(e) => {
+              e.target.style.background = 'rgba(102, 126, 234, 0.2)';
+              e.target.style.transform = 'translateY(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'rgba(102, 126, 234, 0.1)';
+              e.target.style.transform = 'translateY(0)';
+            }}
           >
             Back to Cost Estimate
           </button>
           <button
-            className="btn btn-primary"
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              border: 'none',
+              color: 'white',
+              padding: '15px 30px',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: '600',
+              transition: 'all 0.3s ease',
+              flex: '1',
+              boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)'
+            }}
             onClick={handleConfirmBooking}
-            style={{ flex: '1' }}
+            onMouseOver={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 12px 35px rgba(102, 126, 234, 0.4)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.3)';
+            }}
           >
             Confirm Booking
           </button>

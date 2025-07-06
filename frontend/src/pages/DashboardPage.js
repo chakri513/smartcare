@@ -104,6 +104,90 @@ const DashboardPage = () => {
     }
   };
 
+  // Always use the local enriched upcomingAppointments state for rendering
+  const appointmentsToShow = upcomingAppointments;
+
+  // Enrich appointments from context with provider details if needed
+  useEffect(() => {
+    const enrichAppointments = async () => {
+      if (state.upcomingAppointments && state.upcomingAppointments.length > 0) {
+        const enriched = await Promise.all(state.upcomingAppointments.map(async (booking) => {
+          try {
+            const providerRes = await fetch(`http://127.0.0.1:8000/api/providers/${booking.provider_id}`);
+            if (providerRes.ok) {
+              const provider = await providerRes.json();
+              return {
+                ...booking,
+                providerName: provider.name,
+                specialty: provider.specialty,
+                location: provider.address,
+                date: booking.appointment_time,
+                time: new Date(booking.appointment_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              };
+            }
+          } catch (e) {}
+          return {
+            ...booking,
+            providerName: 'Unknown',
+            specialty: '',
+            location: '',
+            date: booking.appointment_time,
+            time: new Date(booking.appointment_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+        }));
+        setUpcomingAppointments(enriched);
+      }
+    };
+    enrichAppointments();
+    // eslint-disable-next-line
+  }, [state.upcomingAppointments]);
+
+  // Add cancel and reschedule handlers
+  const handleCancel = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this appointment?')) return;
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/bookings/cancel/${bookingId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (response.ok) {
+        fetchUserBookings();
+        alert('Appointment cancelled and deleted successfully.');
+      } else {
+        alert('Failed to cancel appointment.');
+      }
+    } catch (e) {
+      alert('Error cancelling appointment.');
+    }
+  };
+
+  const handleReschedule = async (bookingId) => {
+    const date = window.prompt('Enter new date (YYYY-MM-DD):');
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      alert('Invalid date format. Please use YYYY-MM-DD.');
+      return;
+    }
+    const time = window.prompt('Enter new time (HH:MM, 24-hour):');
+    if (!time || !/^\d{2}:\d{2}$/.test(time)) {
+      alert('Invalid time format. Please use HH:MM (24-hour).');
+      return;
+    }
+    const newTime = `${date}T${time}:00`;
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/bookings/reschedule/${bookingId}?new_time=${encodeURIComponent(newTime)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (response.ok) {
+        fetchUserBookings();
+      } else {
+        alert('Failed to reschedule appointment.');
+      }
+    } catch (e) {
+      alert('Error rescheduling appointment.');
+    }
+  };
+
   if (!state.user) {
     console.log('No user found in state, redirecting to login');
     console.log('Current state:', state);
@@ -280,7 +364,7 @@ const DashboardPage = () => {
               </div>
               <div>
                 <h3 style={{ margin: 0, color: '#333', fontSize: '24px' }}>
-                  {upcomingAppointments.length}
+                  {appointmentsToShow.length}
                 </h3>
                 <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
                   Upcoming Appointments
@@ -363,7 +447,7 @@ const DashboardPage = () => {
             Upcoming Appointments
           </h3>
           
-          {upcomingAppointments.length === 0 ? (
+          {appointmentsToShow.length === 0 ? (
             <div style={{
               textAlign: 'center',
               padding: '40px',
@@ -392,7 +476,7 @@ const DashboardPage = () => {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {upcomingAppointments.map(appointment => (
+              {appointmentsToShow.map(appointment => (
                 <div key={appointment._id || appointment.id} style={{
                   border: '1px solid #e9ecef',
                   borderRadius: '10px',
@@ -405,13 +489,13 @@ const DashboardPage = () => {
                 }}>
                   <div style={{ flex: 1, minWidth: '250px' }}>
                     <h4 style={{ margin: '0 0 5px 0', color: '#333', fontSize: '16px' }}>
-                      {appointment.providerName}
+                      {appointment.providerName || 'Provider info unavailable'}
                     </h4>
                     <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '14px' }}>
                       {appointment.specialty}
                     </p>
                     <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
-                      📍 {appointment.location}
+                      📍 {appointment.location || 'Location unavailable'}
                     </p>
                   </div>
                   
@@ -450,6 +534,7 @@ const DashboardPage = () => {
                     }}
                     onMouseOver={(e) => e.target.style.background = '#0056b3'}
                     onMouseOut={(e) => e.target.style.background = '#007bff'}
+                    onClick={() => handleReschedule(appointment._id || appointment.id)}
                     >
                       Reschedule
                     </button>
@@ -465,6 +550,7 @@ const DashboardPage = () => {
                     }}
                     onMouseOver={(e) => e.target.style.background = '#c82333'}
                     onMouseOut={(e) => e.target.style.background = '#dc3545'}
+                    onClick={() => handleCancel(appointment._id || appointment.id)}
                     >
                       Cancel
                     </button>

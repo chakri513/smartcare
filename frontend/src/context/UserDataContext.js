@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const UserDataContext = createContext();
 
@@ -26,7 +27,8 @@ const initialState = {
   selectedProvider: null,
   bookingData: null,
   costEstimate: null,
-  careSummary: null
+  careSummary: null,
+  upcomingAppointments: []
 };
 
 const userDataReducer = (state, action) => {
@@ -74,6 +76,11 @@ const userDataReducer = (state, action) => {
         ...state,
         careSummary: action.payload
       };
+    case 'SET_UPCOMING_APPOINTMENTS':
+      return {
+        ...state,
+        upcomingAppointments: action.payload
+      };
     case 'LOGOUT':
       return {
         ...state,
@@ -87,7 +94,21 @@ const userDataReducer = (state, action) => {
 };
 
 export const UserDataProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(userDataReducer, initialState);
+  // Restore user from localStorage if present
+  const persistedUser = localStorage.getItem('user');
+  const [state, dispatch] = useReducer(userDataReducer, {
+    ...initialState,
+    user: persistedUser ? JSON.parse(persistedUser) : null
+  });
+
+  // Persist user to localStorage on change
+  useEffect(() => {
+    if (state.user) {
+      localStorage.setItem('user', JSON.stringify(state.user));
+    } else {
+      localStorage.removeItem('user');
+    }
+  }, [state.user]);
 
   return (
     <UserDataContext.Provider value={{ state, dispatch }}>
@@ -102,4 +123,30 @@ export const useUserData = () => {
     throw new Error('useUserData must be used within a UserDataProvider');
   }
   return context;
+};
+
+// BackButton component for all pages
+export const BackButton = ({ style = {}, label = 'Back' }) => {
+  const navigate = useNavigate();
+  return (
+    <button
+      onClick={() => navigate(-1)}
+      style={{
+        background: 'none',
+        border: 'none',
+        color: '#764ba2',
+        fontWeight: 600,
+        fontSize: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        cursor: 'pointer',
+        padding: '8px 0',
+        ...style
+      }}
+      aria-label="Go back"
+    >
+      <span style={{ fontSize: '20px', lineHeight: 1 }}>&larr;</span> {label}
+    </button>
+  );
 }; 

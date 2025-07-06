@@ -27,10 +27,10 @@ const RegisterPage = () => {
         [name]: numericValue
       }));
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
     }
     // Clear error when user starts typing
     if (errors[name]) {
@@ -245,7 +245,7 @@ const RegisterPage = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="phone">Phone Number (Optional)</label>
+              <label htmlFor="phone">Phone Number</label>
               <input
                 type="tel"
                 id="phone"

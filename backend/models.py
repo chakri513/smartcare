@@ -7,7 +7,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     phone: Optional[str] = None
-    age: Optional[int] = None
+    #age: Optional[int] = None
 
 class UserOut(BaseModel):
     id: str = Field(..., alias="_id")
@@ -33,10 +33,14 @@ class Provider(BaseModel):
     rating: float
     wait_time: str
     accepted_insurances: List[str]
+    experience: Optional[str] = None
+    education: Optional[str] = None
+    match_score: Optional[float] = None
+    match_reasons: Optional[List[str]] = None
 
 class IntakeForm(BaseModel):
     user_id: str
-    primarySymptoms: str
+    primarySymptoms: str  # Keep as str to match frontend, will be converted to list in the route
     duration: str
     urgencyLevel: str
     severity: str
