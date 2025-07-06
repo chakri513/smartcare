@@ -1,0 +1,304 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useUserData } from '../context/UserDataContext';
+import { providers } from '../data/sampleData';
+import { format } from 'date-fns';
+
+const ProviderDetailBooking = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { state, dispatch } = useUserData();
+  const [provider, setProvider] = useState(null);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedTime, setSelectedTime] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate API call delay
+    const timer = setTimeout(() => {
+      const foundProvider = providers.find(p => p.id === id);
+      setProvider(foundProvider);
+      setLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [id]);
+
+  const handleBooking = async () => {
+    if (!selectedDate || !selectedTime) {
+      alert('Please select both date and time');
+      return;
+    }
+
+    try {
+      // Get user ID from context
+      const user = state.user;
+      if (!user || !user.id) {
+        alert('Please login first');
+        navigate('/login');
+        return;
+      }
+
+      const appointmentDateTime = `${selectedDate}T${selectedTime}:00Z`;
+      
+      // Prepare booking data for backend
+      const bookingData = {
+        user_id: user.id,
+        provider_id: provider.id,
+        appointment_time: appointmentDateTime,
+        status: "pending"
+      };
+
+      // Real API call to backend
+      const response = await fetch('http://127.0.0.1:8000/api/bookings/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create booking');
+      }
+
+      const result = await response.json();
+      console.log('Booking created successfully:', result);
+      
+      // Store in context for frontend use
+      dispatch({
+        type: 'SET_SELECTED_PROVIDER',
+        payload: provider
+      });
+
+      dispatch({
+        type: 'SET_BOOKING_DATA',
+        payload: {
+          appointment_time: appointmentDateTime,
+          provider_id: provider.id
+        }
+      });
+
+      // Navigate to cost estimate
+      navigate('/cost-estimate');
+      
+    } catch (error) {
+      console.error('Booking error:', error);
+      alert('Failed to create booking: ' + error.message);
+    }
+  };
+
+  const renderStars = (rating) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+    
+    for (let i = 0; i < fullStars; i++) {
+      stars.push('★');
+    }
+    if (hasHalfStar) {
+      stars.push('☆');
+    }
+    for (let i = stars.length; i < 5; i++) {
+      stars.push('☆');
+    }
+    
+    return stars.join('');
+  };
+
+  const generateAvailableTimes = () => {
+    const times = [];
+    for (let hour = 9; hour <= 17; hour++) {
+      times.push(`${hour.toString().padStart(2, '0')}:00`);
+      times.push(`${hour.toString().padStart(2, '0')}:30`);
+    }
+    return times;
+  };
+
+  const generateAvailableDates = () => {
+    const dates = [];
+    const today = new Date();
+    for (let i = 1; i <= 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      dates.push(format(date, 'yyyy-MM-dd'));
+    }
+    return dates;
+  };
+
+  if (loading) {
+    return (
+      <div className="container">
+        <div className="card">
+          <div className="loading">
+            <h2>Loading provider details...</h2>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!provider) {
+    return (
+      <div className="container">
+        <div className="card">
+          <div className="error">
+            <h3>Provider not found</h3>
+            <p>The requested provider could not be found.</p>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => navigate('/results')}
+              style={{ marginTop: '16px' }}
+            >
+              Back to Results
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container">
+      <div className="card">
+        <h1 style={{ marginBottom: '30px', color: '#333' }}>
+          {provider.name}
+        </h1>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '30px' }}>
+          {/* Provider Information */}
+          <div>
+            <h2 style={{ marginBottom: '20px', color: '#333' }}>Provider Information</h2>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ color: '#666', marginBottom: '8px' }}>Specialty</h3>
+              <p style={{ fontSize: '1.1rem' }}>{provider.specialty}</p>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ color: '#666', marginBottom: '8px' }}>Rating</h3>
+              <div className="rating" style={{ fontSize: '1.2rem' }}>
+                {renderStars(provider.rating)} {provider.rating}/5
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ color: '#666', marginBottom: '8px' }}>Wait Time</h3>
+              <p>⏱️ {provider.wait_time}</p>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ color: '#666', marginBottom: '8px' }}>Location</h3>
+              <p>📍 {provider.address}</p>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ color: '#666', marginBottom: '8px' }}>Contact</h3>
+              <p>📞 {provider.phone}</p>
+              <p>✉️ {provider.email}</p>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ color: '#666', marginBottom: '8px' }}>Experience</h3>
+              <p>{provider.experience}</p>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ color: '#666', marginBottom: '8px' }}>Education</h3>
+              <p>{provider.education}</p>
+            </div>
+
+            <div>
+              <h3 style={{ color: '#666', marginBottom: '8px' }}>Accepted Insurance</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {provider.accepted_insurances.map(insurance => (
+                  <span 
+                    key={insurance}
+                    style={{
+                      background: '#e3f2fd',
+                      color: '#1976d2',
+                      padding: '4px 12px',
+                      borderRadius: '16px',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    {insurance}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Booking Section */}
+          <div>
+            <h2 style={{ marginBottom: '20px', color: '#333' }}>Book Appointment</h2>
+            
+            <div className="form-group">
+              <label htmlFor="appointment-date">Select Date</label>
+              <select
+                id="appointment-date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              >
+                <option value="">Choose a date</option>
+                {generateAvailableDates().map(date => (
+                  <option key={date} value={date}>
+                    {format(new Date(date), 'EEEE, MMMM d, yyyy')}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="appointment-time">Select Time</label>
+              <select
+                id="appointment-time"
+                value={selectedTime}
+                onChange={(e) => setSelectedTime(e.target.value)}
+              >
+                <option value="">Choose a time</option>
+                {generateAvailableTimes().map(time => (
+                  <option key={time} value={time}>
+                    {time}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ 
+              background: '#f8f9fa', 
+              padding: '16px', 
+              borderRadius: '8px', 
+              marginBottom: '20px' 
+            }}>
+              <h3 style={{ marginBottom: '8px' }}>Your Information:</h3>
+              <p><strong>Symptoms:</strong> {state.userData.primarySymptoms || '-'}</p>
+              <p><strong>Insurance:</strong> {state.userData.insuranceProvider ? `${state.userData.insuranceProvider}${state.userData.insurancePlan ? ' - ' + state.userData.insurancePlan : ''}` : '-'}</p>
+            </div>
+
+            <button
+              className="btn btn-primary"
+              onClick={handleBooking}
+              style={{ width: '100%', padding: '16px' }}
+              disabled={!selectedDate || !selectedTime}
+            >
+              Continue to Cost Estimate
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => navigate('/results')}
+          >
+            Back to Results
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProviderDetailBooking; 
